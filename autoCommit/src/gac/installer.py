@@ -102,52 +102,62 @@ def install_llama_cpp(install_dir: Path) -> Path:
     system, arch = get_system_info()
 
     # llama.cpp release URLs
-    # Using latest release from GitHub
-    version = "b3750"  # Update this to latest stable version
+    # Using latest release from GitHub (supports Gemma 3)
+    version = "b9070"  # Latest version as of May 2025
     base_url = f"https://github.com/ggerganov/llama.cpp/releases/download/{version}"
 
     if system == "darwin":
         if arch == "arm64":
-            filename = f"llama-{version}-bin-macos-arm64.zip"
+            filename = f"llama-{version}-bin-macos-arm64.tar.gz"
         else:
-            filename = f"llama-{version}-bin-macos-x64.zip"
+            filename = f"llama-{version}-bin-macos-x64.tar.gz"
     else:  # linux
         if arch == "arm64":
-            filename = f"llama-{version}-bin-ubuntu-aarch64.zip"
+            filename = f"llama-{version}-bin-ubuntu-aarch64.tar.gz"
         else:
-            filename = f"llama-{version}-bin-ubuntu-x64.zip"
+            filename = f"llama-{version}-bin-ubuntu-x64.tar.gz"
 
     url = f"{base_url}/{filename}"
     bin_dir = install_dir / "bin"
-    zip_path = install_dir / filename
+    archive_path = install_dir / filename
 
     console.print(f"[cyan]Downloading llama.cpp for {system}/{arch}...[/cyan]")
 
     try:
-        download_file(url, zip_path, "Downloading llama.cpp")
+        download_file(url, archive_path, "Downloading llama.cpp")
 
         # Extract
         console.print("[cyan]Extracting...[/cyan]")
-        subprocess.run(["unzip", "-q", "-o", str(zip_path), "-d", str(install_dir)], check=True)
+        subprocess.run(["tar", "-xzf", str(archive_path), "-C", str(install_dir)], check=True)
 
-        # Find llama-cli binary
+        # Find llama-cli binary and its directory
         llama_cli = None
+        source_dir = None
         for path in install_dir.rglob("llama-cli"):
             if path.is_file():
                 llama_cli = path
+                source_dir = path.parent
                 break
 
-        if not llama_cli:
+        if not llama_cli or not source_dir:
             raise InstallError("llama-cli binary not found in extracted files")
 
-        # Move to bin directory
+        # Create bin directory
         bin_dir.mkdir(parents=True, exist_ok=True)
+
+        # Move llama-cli binary
         final_path = bin_dir / "llama-cli"
         llama_cli.rename(final_path)
         final_path.chmod(0o755)
 
+        # Move all .dylib files (shared libraries) to bin directory
+        for dylib in source_dir.glob("*.dylib*"):
+            dest = bin_dir / dylib.name
+            dylib.rename(dest)
+            console.print(f"[dim]  Moved {dylib.name}[/dim]")
+
         # Cleanup
-        zip_path.unlink()
+        archive_path.unlink()
         for item in install_dir.iterdir():
             if item.is_dir() and item != bin_dir:
                 subprocess.run(["rm", "-rf", str(item)], check=False)

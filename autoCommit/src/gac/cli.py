@@ -53,11 +53,11 @@ def check_setup() -> tuple[Config, LlamaLLM]:
 @app.command()
 def commit(
     push: bool = typer.Option(False, "--push", "-p", help="Push after committing"),
-    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
+    yes: bool = typer.Option(True, "--yes/--no-yes", "-y", help="Skip confirmation (default: yes)"),
     dry_run: bool = typer.Option(False, "--dry-run", "-d", help="Generate message only"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show debug output"),
     interactive: bool = typer.Option(
-        True, "--interactive/--no-interactive", "-i/-I", help="Show multiple candidates"
+        False, "--interactive/--no-interactive", "-i/-I", help="Show multiple candidates"
     ),
 ) -> None:
     """Generate commit message and create commit."""
@@ -69,8 +69,15 @@ def commit(
     # Check setup
     config, llm = check_setup()
 
-    # Get git information
+    # Auto-stage all changes
     try:
+        # Check if there are any changes to stage
+        status = git_utils.get_git_status()
+        if status.strip():
+            console.print("[cyan]Auto-staging changes...[/cyan]")
+            git_utils._run_git_command(["add", "."])
+
+        # Get git information
         diff = git_utils.get_staged_diff()
         changed_files = git_utils.get_changed_files()
         recent_commits = git_utils.get_recent_commit_messages()

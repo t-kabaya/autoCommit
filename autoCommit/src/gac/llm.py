@@ -58,13 +58,16 @@ class LlamaLLM:
                 str(self.llama_cli_path),
                 "-m",
                 str(self.model_path),
-                "-p",
+                "--prompt",  # Use --prompt instead of -p for non-interactive mode
                 prompt,
                 "-n",
                 str(self.max_tokens),
                 "--temp",
                 str(self.temperature),
                 "--no-display-prompt",
+                "--no-conversation",  # Disable conversation mode explicitly
+                "--single-turn",  # Run for single turn only
+                "--log-disable",  # Disable logging
             ]
 
             if verbose:
@@ -73,6 +76,7 @@ class LlamaLLM:
 
             result = subprocess.run(
                 cmd,
+                stdin=subprocess.DEVNULL,  # Close stdin to prevent interactive mode
                 capture_output=True,
                 text=True,
                 timeout=60,
