@@ -10,7 +10,6 @@ from rich.prompt import Confirm, IntPrompt
 from . import git_utils, prompts
 from .config import Config
 from .llm import LlamaLLM, LLMError
-from .installer import run_installation, InstallError
 
 app = typer.Typer(
     name="gac",
@@ -33,14 +32,13 @@ def check_setup() -> tuple[Config, LlamaLLM]:
 
     if not config.is_configured():
         console.print(
-            "[bold red]Error:[/bold red] gac is not installed. Run [bold]gac install[/bold] first."
+            "[bold red]Error:[/bold red] No model configured. Set 'model' in ~/.gac/config.toml"
         )
         raise typer.Exit(1)
 
     try:
         llm = LlamaLLM(
             model_path=config.model_path,
-            llama_cli_path=config.llama_cli_path,
             temperature=config.temperature,
             max_tokens=config.max_tokens,
         )
@@ -172,20 +170,6 @@ def commit(
             console.print("[bold green]✓ Changes pushed to remote[/bold green]")
 
     except git_utils.GitError as e:
-        console.print(f"\n[bold red]Error:[/bold red] {str(e)}")
-        raise typer.Exit(1)
-
-
-@app.command()
-def install(
-    model_url: Optional[str] = typer.Option(
-        None, "--model-url", "-m", help="Custom model URL (optional)"
-    )
-) -> None:
-    """Install llama.cpp and download model."""
-    try:
-        run_installation()
-    except (InstallError, Exception) as e:
         console.print(f"\n[bold red]Error:[/bold red] {str(e)}")
         raise typer.Exit(1)
 

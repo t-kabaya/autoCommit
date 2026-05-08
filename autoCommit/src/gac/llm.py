@@ -1,7 +1,5 @@
-"""LLM integration using llama.cpp."""
+"""LLM integration using transformers."""
 
-import subprocess
-import re
 from pathlib import Path
 from typing import List, Optional
 
@@ -12,36 +10,72 @@ class LLMError(Exception):
     pass
 
 
-class LlamaLLM:
-    """LLM interface using llama.cpp subprocess."""
+class TransformersLLM:
+    """LLM interface using transformers library."""
 
     def __init__(
         self,
-        model_path: Path,
-        llama_cli_path: Path,
+        model_path: str,
         temperature: float = 0.2,
         max_tokens: int = 64,
+        **kwargs  # Accept but ignore llama_cli_path for compatibility
     ) -> None:
-        """Initialize LlamaLLM.
+        """Initialize TransformersLLM.
 
         Args:
-            model_path: Path to GGUF model file
-            llama_cli_path: Path to llama-cli binary
+            model_path: HuggingFace model ID or local path
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
         """
         self.model_path = model_path
-        self.llama_cli_path = llama_cli_path
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.model = None
+        self.tokenizer = None
+        self.device = None
 
-        if not self.model_path.exists():
-            raise LLMError(f"Model not found at {self.model_path}")
-        if not self.llama_cli_path.exists():
-            raise LLMError(f"llama-cli not found at {self.llama_cli_path}")
+    def _load_model(self) -> None:
+        """Load model and tokenizer lazily."""
+        if self.model is not None:
+            return
+
+        try:
+            from transformers import AutoModelForCausalLM, AutoTokenizer
+            import torch
+
+            # Load tokenizer
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_path,
+                trust_remote_code=True
+            )
+
+            # Determine device
+            if torch.backends.mps.is_available():
+                device = "mps"
+                dtype = torch.float16
+            elif torch.cuda.is_available():
+                device = "cuda"
+                dtype = torch.float16
+            else:
+                device = "cpu"
+                dtype = torch.float32
+
+            # Load model
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_path,
+                torch_dtype=dtype,
+                device_map=device,
+                trust_remote_code=True,
+                low_cpu_mem_usage=True,
+            )
+
+            self.device = device
+
+        except Exception as e:
+            raise LLMError(f"Failed to load model: {str(e)}") from e
 
     def generate(self, prompt: str, verbose: bool = False) -> str:
-        """Generate text using llama.cpp.
+        """Generate text using transformers.
 
         Args:
             prompt: Input prompt
@@ -54,55 +88,48 @@ class LlamaLLM:
             LLMError: If generation fails
         """
         try:
-            cmd = [
-                str(self.llama_cli_path),
-                "-m",
-                str(self.model_path),
-                "--prompt",  # Use --prompt instead of -p for non-interactive mode
-                prompt,
-                "-n",
-                str(self.max_tokens),
-                "--temp",
-                str(self.temperature),
-                "--no-display-prompt",
-                "--no-conversation",  # Disable conversation mode explicitly
-                "--single-turn",  # Run for single turn only
-                "--log-disable",  # Disable logging
-                "--simple-io",  # Use basic IO, suppress logos and UI
-            ]
+            self._load_model()
 
             if verbose:
-                print(f"\n[DEBUG] Running command: {' '.join(cmd)}\n")
+                print(f"\n[DEBUG] Model: {self.model_path}")
+                print(f"[DEBUG] Device: {self.device}")
                 print(f"[DEBUG] Prompt:\n{prompt}\n")
 
-            result = subprocess.run(
-                cmd,
-                stdin=subprocess.DEVNULL,  # Close stdin to prevent interactive mode
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
+            # Tokenize input
+            inputs = self.tokenizer(prompt, return_tensors="pt")
 
-            if result.returncode != 0:
-                raise LLMError(f"llama-cli failed: {result.stderr}")
+            if self.device in ["mps", "cuda"]:
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-            output = result.stdout.strip()
+            # Generate
+            import torch
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    max_new_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                    do_sample=True if self.temperature > 0 else False,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                )
+
+            # Decode output
+            generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+            # Remove the prompt from output
+            if generated_text.startswith(prompt):
+                generated_text = generated_text[len(prompt):].strip()
 
             if verbose:
-                print(f"[DEBUG] Raw output:\n{output}\n")
+                print(f"[DEBUG] Raw output:\n{generated_text}\n")
 
-            # Clean up output
-            output = self._clean_output(output)
+            # Clean output
+            output = self._clean_output(generated_text)
 
             if not output:
                 raise LLMError("No output generated from LLM")
 
             return output
 
-        except subprocess.TimeoutExpired:
-            raise LLMError("LLM generation timed out")
-        except FileNotFoundError:
-            raise LLMError(f"llama-cli not found at {self.llama_cli_path}")
         except Exception as e:
             raise LLMError(f"LLM generation failed: {str(e)}") from e
 
@@ -115,16 +142,26 @@ class LlamaLLM:
         Returns:
             Cleaned commit message
         """
-        # Remove common prefixes/suffixes
+        # Remove leading/trailing whitespace
         output = output.strip()
 
-        # Remove any leading/trailing quotes
-        output = output.strip('"\'')
-
-        # Take first line if multiple lines (for single commit message)
+        # Take first line (commit messages are single line)
         lines = [line.strip() for line in output.split("\n") if line.strip()]
         if lines:
             output = lines[0]
+
+        # Remove quotes
+        output = output.strip('"\'`')
+
+        # Remove common prefixes
+        prefixes = ["commit message:", "message:", "answer:", "response:"]
+        for prefix in prefixes:
+            if output.lower().startswith(prefix):
+                output = output[len(prefix):].strip()
+
+        # Remove markdown code blocks
+        if output.startswith("```") and output.endswith("```"):
+            output = output[3:-3].strip()
 
         return output
 
@@ -144,63 +181,30 @@ class LlamaLLM:
         Raises:
             LLMError: If generation fails
         """
-        # Generate with higher max_tokens for multiple candidates
-        original_max_tokens = self.max_tokens
-        self.max_tokens = max(128, num_candidates * 80)
-
-        try:
-            output = self.generate(prompt, verbose=verbose)
-            candidates = self._parse_candidates(output, num_candidates)
-
-            if not candidates:
-                # Fallback: generate single message
-                self.max_tokens = original_max_tokens
-                single = self.generate(
-                    prompt.replace(f"Generate {num_candidates}", "Generate ONE"), verbose
-                )
-                candidates = [single]
-
-            return candidates
-
-        finally:
-            self.max_tokens = original_max_tokens
-
-    def _parse_candidates(self, output: str, expected: int) -> List[str]:
-        """Parse multiple candidates from output.
-
-        Args:
-            output: Raw LLM output
-            expected: Expected number of candidates
-
-        Returns:
-            List of parsed candidates
-        """
         candidates = []
-        lines = output.split("\n")
 
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
+        # Generate multiple candidates with different temperatures
+        original_temp = self.temperature
+        temps = [0.1, 0.3, 0.5][:num_candidates]
 
-            # Remove numbering like "1. ", "2. ", etc.
-            line = re.sub(r"^\d+[\.\)]\s*", "", line)
+        for i, temp in enumerate(temps):
+            self.temperature = temp
+            try:
+                candidate = self.generate(prompt, verbose=verbose and i == 0)
+                if candidate and candidate not in candidates:
+                    candidates.append(candidate)
+            except Exception:
+                pass
 
-            # Remove quotes
-            line = line.strip('"\'')
+        self.temperature = original_temp
 
-            # Skip non-commit-like lines
-            if len(line) < 10 or len(line) > 100:
-                continue
+        # If we don't have enough candidates, return what we have
+        if not candidates:
+            # Fallback: try once more with original temperature
+            candidates = [self.generate(prompt, verbose)]
 
-            # Check if looks like a commit message
-            if ":" in line or any(
-                line.startswith(t)
-                for t in ["feat", "fix", "docs", "style", "refactor", "test", "chore"]
-            ):
-                candidates.append(line)
+        return candidates[:num_candidates]
 
-            if len(candidates) >= expected:
-                break
 
-        return candidates
+# Alias for backward compatibility
+LlamaLLM = TransformersLLM

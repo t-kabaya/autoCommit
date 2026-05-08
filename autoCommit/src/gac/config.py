@@ -9,8 +9,7 @@ class Config:
     """Configuration manager for gac."""
 
     DEFAULT_CONFIG = {
-        "model": "~/.gac/models/gemma-3-1b-it-Q4_K_M.gguf",
-        "llama_cli": "~/.gac/bin/llama-cli",
+        "model": "google/gemma-2-2b-it",  # HuggingFace model ID
         "temperature": 0.2,
         "max_tokens": 64,
         "num_candidates": 3,
@@ -74,14 +73,9 @@ class Config:
         self._config[key] = value
 
     @property
-    def model_path(self) -> Path:
-        """Get model path with expansion."""
-        return Path(self.get("model")).expanduser()
-
-    @property
-    def llama_cli_path(self) -> Path:
-        """Get llama-cli path with expansion."""
-        return Path(self.get("llama_cli")).expanduser()
+    def model_path(self) -> str:
+        """Get model ID or path."""
+        return self.get("model", "google/gemma-2-2b-it")
 
     @property
     def temperature(self) -> float:
@@ -102,9 +96,9 @@ class Config:
         """Check if gac is properly configured.
 
         Returns:
-            True if model and llama-cli exist
+            True if model is specified
         """
-        return self.model_path.exists() and self.llama_cli_path.exists()
+        return bool(self.model_path)
 
     def __str__(self) -> str:
         """String representation of config."""
