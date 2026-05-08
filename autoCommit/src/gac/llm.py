@@ -68,6 +68,7 @@ class LlamaLLM:
                 "--no-conversation",  # Disable conversation mode explicitly
                 "--single-turn",  # Run for single turn only
                 "--log-disable",  # Disable logging
+                "--simple-io",  # Use basic IO, suppress logos and UI
             ]
 
             if verbose:
