@@ -9,7 +9,7 @@ class Config:
     """Configuration manager for gac."""
 
     DEFAULT_CONFIG = {
-        "model": "~/.gac/models/qwen2.5-coder-3b-instruct-q4_k_m.gguf",
+        "model": "~/.gac/models/gemma-3-1b-it-Q4_K_M.gguf",
         "llama_cli": "~/.gac/bin/llama-cli",
         "temperature": 0.2,
         "max_tokens": 64,

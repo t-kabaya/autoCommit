@@ -175,10 +175,11 @@ def install_model(install_dir: Path, model_url: Optional[str] = None) -> Path:
     models_dir = install_dir / "models"
     models_dir.mkdir(parents=True, exist_ok=True)
 
-    # Default: Qwen2.5-Coder-3B-Instruct Q4_K_M
+    # Default: Gemma 3 1B IT Q4_K_M (lightweight, fast)
     if model_url is None:
-        model_name = "qwen2.5-coder-3b-instruct-q4_k_m.gguf"
-        model_url = f"https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/{model_name}"
+        model_name = "gemma-3-1b-it-Q4_K_M.gguf"
+        # Using unsloth's repo - reliable and well-maintained
+        model_url = f"https://huggingface.co/unsloth/gemma-3-1b-it-GGUF/resolve/main/{model_name}"
     else:
         model_name = model_url.split("/")[-1]
 
