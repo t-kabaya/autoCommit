@@ -57,6 +57,10 @@ def commit(
     interactive: bool = typer.Option(
         False, "--interactive/--no-interactive", "-i/-I", help="Show multiple candidates"
     ),
+    fast: bool = typer.Option(False, "--fast", "-f", help="Use 4-bit quantized gemma-3-1b (faster, less memory)"),
+    model: Optional[str] = typer.Option(
+        None, "--model", "-m", help="Model size: small, medium (or HF model ID)"
+    ),
 ) -> None:
     """Generate commit message and create commit."""
     # Check if in git repo
@@ -66,6 +70,29 @@ def commit(
 
     # Check setup
     config, llm = check_setup()
+
+    # Fast mode: use quantized gemma-3-1b
+    if fast:
+        console.print(f"[cyan]Fast mode: Using 4-bit quantized {Config.FAST_MODEL}[/cyan]")
+        llm = LlamaLLM(
+            model_path=Config.FAST_MODEL,
+            temperature=config.temperature,
+            max_tokens=config.max_tokens,
+            use_4bit=True,
+        )
+    # Override model if specified
+    elif model:
+        if model in Config.MODELS:
+            model_id = Config.MODELS[model]
+            console.print(f"[cyan]Using {model} model: {model_id}[/cyan]")
+        else:
+            model_id = model
+            console.print(f"[cyan]Using custom model: {model_id}[/cyan]")
+        llm = LlamaLLM(
+            model_path=model_id,
+            temperature=config.temperature,
+            max_tokens=config.max_tokens,
+        )
 
     # Auto-stage all changes
     try:

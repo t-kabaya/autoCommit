@@ -8,6 +8,15 @@ import toml
 class Config:
     """Configuration manager for gac."""
 
+    # Available models
+    MODELS = {
+        "small": "google/gemma-2-2b-it",  # ~2B, balanced (~4GB)
+        "medium": "google/gemma-3-3b-it",  # ~3B, powerful (~6GB)
+    }
+
+    # Fast mode: quantized model
+    FAST_MODEL = "google/gemma-3-1b-it"  # 4-bit quantized (~500MB)
+
     DEFAULT_CONFIG = {
         "model": "google/gemma-2-2b-it",  # HuggingFace model ID
         "temperature": 0.2,

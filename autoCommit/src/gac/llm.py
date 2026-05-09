@@ -18,6 +18,7 @@ class TransformersLLM:
         model_path: str,
         temperature: float = 0.2,
         max_tokens: int = 64,
+        use_4bit: bool = False,  # Enable 4-bit quantization
         **kwargs  # Accept but ignore llama_cli_path for compatibility
     ) -> None:
         """Initialize TransformersLLM.
@@ -26,10 +27,12 @@ class TransformersLLM:
             model_path: HuggingFace model ID or local path
             temperature: Sampling temperature
             max_tokens: Maximum tokens to generate
+            use_4bit: Use 4-bit quantization (faster, less memory)
         """
         self.model_path = model_path
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.use_4bit = use_4bit
         self.model = None
         self.tokenizer = None
         self.device = None
@@ -49,24 +52,44 @@ class TransformersLLM:
                 trust_remote_code=True
             )
 
-            # Determine device
-            if torch.backends.mps.is_available():
-                device = "mps"
-                dtype = torch.float16
-            elif torch.cuda.is_available():
-                device = "cuda"
-                dtype = torch.float16
+            # Prepare model loading arguments
+            model_kwargs = {
+                "trust_remote_code": True,
+                "low_cpu_mem_usage": True,
+            }
+
+            # 4-bit quantization
+            if self.use_4bit:
+                from transformers import BitsAndBytesConfig
+
+                quantization_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.float16,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4"
+                )
+                model_kwargs["quantization_config"] = quantization_config
+                model_kwargs["device_map"] = "auto"
+                device = "cuda" if torch.cuda.is_available() else "mps"
             else:
-                device = "cpu"
-                dtype = torch.float32
+                # Determine device for non-quantized
+                if torch.backends.mps.is_available():
+                    device = "mps"
+                    dtype = torch.float16
+                elif torch.cuda.is_available():
+                    device = "cuda"
+                    dtype = torch.float16
+                else:
+                    device = "cpu"
+                    dtype = torch.float32
+
+                model_kwargs["torch_dtype"] = dtype
+                model_kwargs["device_map"] = device
 
             # Load model
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
-                torch_dtype=dtype,
-                device_map=device,
-                trust_remote_code=True,
-                low_cpu_mem_usage=True,
+                **model_kwargs
             )
 
             self.device = device
