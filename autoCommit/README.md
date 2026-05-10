@@ -108,6 +108,27 @@ uv venv && source .venv/bin/activate
 uv pip install -e .
 ```
 
+## PyPIへの公開
+
+```bash
+# PyPI APIトークンを取得 (初回のみ)
+# https://pypi.org/manage/account/token/
+
+# 環境変数に設定 (オプション)
+export TWINE_USERNAME=__token__
+export TWINE_PASSWORD=your-pypi-token
+
+# 公開スクリプトを実行
+./publish.sh
+```
+
+公開後、ユーザーは以下でインストール可能:
+```bash
+pip install gac
+# または
+uv pip install gac
+```
+
 ## ライセンス
 
 MIT
