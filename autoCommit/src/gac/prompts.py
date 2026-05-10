@@ -30,7 +30,7 @@ def build_commit_prompt(
 RULES:
 1. Follow Conventional Commits: type(scope): description
 2. Types: feat, fix, docs, style, refactor, test, chore
-3. Keep it under 72 characters
+3. Keep it under 30 characters
 4. Be specific and descriptive
 5. Focus on WHAT changed and WHY, not HOW
 6. Output ONLY the commit message, nothing else
