@@ -47,6 +47,8 @@ class TransformersLLM:
             import torch
 
             # Load tokenizer
+            # trust_remote_code: Allow execution of custom code in the model
+            # local_files_only: Use only local cached files, no network access
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path,
                 trust_remote_code=True,
@@ -87,9 +89,10 @@ class TransformersLLM:
                 model_kwargs["torch_dtype"] = dtype
                 model_kwargs["device_map"] = device
 
-            # Load model
+            # Load model with local files only (no network access)
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
+                local_files_only=True,
                 **model_kwargs
             )
 
