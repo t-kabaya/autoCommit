@@ -57,7 +57,7 @@ def commit(
     interactive: bool = typer.Option(
         False, "--interactive/--no-interactive", "-i/-I", help="Show multiple candidates"
     ),
-    fast: bool = typer.Option(False, "--fast", "-f", help="Use 4-bit quantized gemma-3-1b (faster, less memory)"),
+    fast: bool = typer.Option(False, "--fast", "-f", help="Use gemma-3-1b model (~2GB)"),
     model: Optional[str] = typer.Option(
         None, "--model", "-m", help="Model size: small, medium (or HF model ID)"
     ),
@@ -71,9 +71,9 @@ def commit(
     # Check setup
     config, llm = check_setup()
 
-    # Fast mode: use quantized gemma-3-1b
+    # Fast mode: use smaller model
     if fast:
-        console.print(f"[cyan]Fast mode: Using 4-bit quantized {Config.FAST_MODEL}[/cyan]")
+        console.print(f"[cyan]Fast mode: Using {Config.FAST_MODEL}[/cyan]")
         llm = LlamaLLM(
             model_path=Config.FAST_MODEL,
             temperature=config.temperature,

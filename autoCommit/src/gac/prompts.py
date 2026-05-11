@@ -25,26 +25,18 @@ def build_commit_prompt(
     if len(diff) > 3000:
         diff = diff[:3000] + "\n... (diff truncated)"
 
-    prompt = f"""You are a git commit message generator. Generate a concise, professional commit message following Conventional Commits format.
+    prompt = f"""Generate a git commit message (under 30 chars) following conventional commits format (feat/fix/docs/style/refactor/test/chore).
 
-RULES:
-1. Follow Conventional Commits: type(scope): description
-2. Types: feat, fix, docs, style, refactor, test, chore
-3. Keep it under 30 characters
-4. Be specific and descriptive
-5. Focus on WHAT changed and WHY, not HOW
-6. Output ONLY the commit message, nothing else
-
-Changed Files:
+Files changed:
 {files_str}
 
-Recent Commit Messages (for style reference):
+Recent commits:
 {recent_str}
 
-Staged Diff:
+Diff:
 {diff}
 
-Generate ONE commit message:"""
+Commit message:"""
 
     return prompt
 

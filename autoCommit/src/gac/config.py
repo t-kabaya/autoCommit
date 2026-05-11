@@ -14,8 +14,8 @@ class Config:
         "medium": "google/gemma-3-3b-it",  # ~3B, powerful (~6GB)
     }
 
-    # Fast mode: quantized model
-    FAST_MODEL = "google/gemma-3-1b-it"  # 4-bit quantized (~500MB)
+    # Fast mode: gemma-3-1b model (already cached)
+    FAST_MODEL = "google/gemma-3-1b-it"  # Gemma 3 1B (~2GB)
 
     DEFAULT_CONFIG = {
         "model": "google/gemma-2-2b-it",  # HuggingFace model ID

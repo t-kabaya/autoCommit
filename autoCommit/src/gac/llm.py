@@ -37,6 +37,24 @@ class TransformersLLM:
         self.tokenizer = None
         self.device = None
 
+    def _is_model_cached(self) -> bool:
+        """Check if model is already cached locally.
+
+        Returns:
+            True if model is cached, False otherwise
+        """
+        try:
+            from transformers import AutoTokenizer
+            # Try to load with local_files_only to check cache
+            AutoTokenizer.from_pretrained(
+                self.model_path,
+                trust_remote_code=True,
+                local_files_only=True
+            )
+            return True
+        except Exception:
+            return False
+
     def _load_model(self) -> None:
         """Load model and tokenizer lazily."""
         if self.model is not None:
@@ -46,13 +64,16 @@ class TransformersLLM:
             from transformers import AutoModelForCausalLM, AutoTokenizer
             import torch
 
+            # Check if model is cached
+            use_local_only = self._is_model_cached()
+
             # Load tokenizer
             # trust_remote_code: Allow execution of custom code in the model
-            # local_files_only: Use only local cached files, no network access
+            # local_files_only: Use cache if available, download if not
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_path,
                 trust_remote_code=True,
-                local_files_only=True
+                local_files_only=use_local_only
             )
 
             # Prepare model loading arguments
@@ -86,13 +107,13 @@ class TransformersLLM:
                     device = "cpu"
                     dtype = torch.float32
 
-                model_kwargs["torch_dtype"] = dtype
+                model_kwargs["dtype"] = dtype
                 model_kwargs["device_map"] = device
 
-            # Load model with local files only (no network access)
+            # Load model (use cache if available, download if not)
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
-                local_files_only=True,
+                local_files_only=use_local_only,
                 **model_kwargs
             )
 
@@ -122,8 +143,15 @@ class TransformersLLM:
                 print(f"[DEBUG] Device: {self.device}")
                 print(f"[DEBUG] Prompt:\n{prompt}\n")
 
+            # Don't use chat template - use simple instruction format
+            # Chat template causes Gemma 3 to not generate properly
+            formatted_prompt = prompt
+
+            if verbose:
+                print(f"[DEBUG] Using simple prompt format (no chat template)")
+
             # Tokenize input
-            inputs = self.tokenizer(prompt, return_tensors="pt")
+            inputs = self.tokenizer(formatted_prompt, return_tensors="pt")
 
             if self.device in ["mps", "cuda"]:
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
@@ -131,23 +159,42 @@ class TransformersLLM:
             # Generate
             import torch
             with torch.no_grad():
+                generation_config = {
+                    "max_new_tokens": self.max_tokens,
+                    "temperature": self.temperature,
+                    "do_sample": True if self.temperature > 0 else False,
+                    "pad_token_id": self.tokenizer.pad_token_id if self.tokenizer.pad_token_id else self.tokenizer.eos_token_id,
+                }
+
+                # Don't set eos_token_id explicitly to avoid premature termination
                 outputs = self.model.generate(
                     **inputs,
-                    max_new_tokens=self.max_tokens,
-                    temperature=self.temperature,
-                    do_sample=True if self.temperature > 0 else False,
-                    pad_token_id=self.tokenizer.eos_token_id,
+                    **generation_config
                 )
 
             # Decode output
-            generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            if verbose:
+                print(f"[DEBUG] Input token length: {inputs['input_ids'].shape[1]}")
+                print(f"[DEBUG] Output token length: {outputs.shape[1]}")
+                print(f"[DEBUG] New tokens generated: {outputs.shape[1] - inputs['input_ids'].shape[1]}")
 
-            # Remove the prompt from output
-            if generated_text.startswith(prompt):
-                generated_text = generated_text[len(prompt):].strip()
+            full_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            full_text_with_tokens = self.tokenizer.decode(outputs[0], skip_special_tokens=False)
 
             if verbose:
-                print(f"[DEBUG] Raw output:\n{generated_text}\n")
+                print(f"[DEBUG] Full output (with special tokens):\n{full_text_with_tokens}\n")
+                print(f"[DEBUG] Full output (without special tokens):\n{full_text}\n")
+
+            # Extract generated text by removing the prompt
+            if full_text.startswith(formatted_prompt):
+                generated_text = full_text[len(formatted_prompt):].strip()
+            elif full_text.startswith(prompt):
+                generated_text = full_text[len(prompt):].strip()
+            else:
+                generated_text = full_text.strip()
+
+            if verbose:
+                print(f"[DEBUG] After prompt removal:\n{generated_text}\n")
 
             # Clean output
             output = self._clean_output(generated_text)
