@@ -78,7 +78,6 @@ def commit(
             model_path=Config.FAST_MODEL,
             temperature=config.temperature,
             max_tokens=config.max_tokens,
-            use_4bit=True,
         )
     # Override model if specified
     elif model:
