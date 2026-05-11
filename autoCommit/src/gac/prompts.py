@@ -25,18 +25,16 @@ def build_commit_prompt(
     if len(diff) > 3000:
         diff = diff[:3000] + "\n... (diff truncated)"
 
-    prompt = f"""Generate a git commit message (under 30 chars) following conventional commits format (feat/fix/docs/style/refactor/test/chore).
+    prompt = f"""Write ONE line commit message for these changes.
+Format: type: description (feat/fix/docs/style/refactor/test/chore)
+Max 30 characters.
 
-Files changed:
-{files_str}
+Files: {', '.join(changed_files[:3])}
+Recent: {recent_commits[0] if recent_commits else 'None'}
 
-Recent commits:
-{recent_str}
+{diff[:500]}
 
-Diff:
-{diff}
-
-Commit message:"""
+Commit:"""
 
     return prompt
 

@@ -228,7 +228,7 @@ class TransformersLLM:
         output = output.strip('"\'`')
 
         # Remove common prefixes
-        prefixes = ["commit message:", "message:", "answer:", "response:"]
+        prefixes = ["commit message:", "commit:", "message:", "answer:", "response:"]
         for prefix in prefixes:
             if output.lower().startswith(prefix):
                 output = output[len(prefix):].strip()
@@ -236,6 +236,22 @@ class TransformersLLM:
         # Remove markdown code blocks
         if output.startswith("```") and output.endswith("```"):
             output = output[3:-3].strip()
+
+        # Add conventional commit type if missing
+        types = ["feat", "fix", "docs", "style", "refactor", "test", "chore"]
+        has_type = any(output.lower().startswith(f"{t}:") for t in types)
+
+        if not has_type:
+            # Infer type from keywords in message
+            output_lower = output.lower()
+            if "add" in output_lower or "new" in output_lower or "create" in output_lower:
+                output = f"feat: {output}"
+            elif "fix" in output_lower or "bug" in output_lower or "resolve" in output_lower:
+                output = f"fix: {output}"
+            elif "update" in output_lower or "change" in output_lower or "modify" in output_lower:
+                output = f"refactor: {output}"
+            else:
+                output = f"chore: {output}"
 
         return output
 
