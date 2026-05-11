@@ -1,141 +1,137 @@
 # gac - Git Auto Commit
 
-ローカルLLMでgitコミットメッセージを自動生成するCLIツール。
+AI-powered git commit message generator using local LLM.
 
-**完全オフライン。外部API不要。プライバシー保護。**
+**Fully offline. No external API. Privacy-focused.**
 
-## 特徴
+## Features
 
-- 🤖 ローカルLLM (llama.cpp + GGUF)
-- 🎯 Conventional Commits形式
-- 📝 diff/履歴を分析
-- ⚡ 軽量・高速
-- 🔒 完全プライベート
+- 🤖 Local LLM (transformers + Gemma 3)
+- 🎯 Conventional Commits format
+- 📝 Analyzes diff and history
+- ⚡ Lightweight and fast
+- 🔒 Completely private
 
-## インストール
+## Installation
 
 ```bash
-# uvのインストール
+# Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# gacのインストール
+# Install gac
 cd autoCommit
 uv venv
-source .venv/bin/activate  # または: .venv/bin/activate (Windowsは .venv\Scripts\activate)
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 uv pip install -e .
-
-# セットアップ（llama.cpp + Gemma 3 1B モデルをダウンロード）
-gac install
 ```
 
-## 使い方
+## Usage
 
 ```bash
-# 基本
+# Basic usage
 gac commit
 
-# pushも同時に
+# Fast mode (uses Gemma 3-1b)
+gac commit --fast
+
+# With push
 gac commit --push
 
-# 複数候補から選択
+# Interactive mode (choose from multiple candidates)
 gac commit --interactive
 
-# メッセージ生成のみ
+# Dry run (generate message only)
 gac commit --dry-run
 ```
 
-**注意**: デフォルトで`git add .`と自動コミットが実行されます。
+**Note**: `git add .` and auto-commit are executed by default.
 
-## 設定
+## Configuration
 
 `~/.gac/config.toml`
 
 ```toml
-model = "~/.gac/models/gemma-3-1b-it-Q4_K_M.gguf"
-llama_cli = "~/.gac/bin/llama-cli"
+model = "google/gemma-2-2b-it"  # HuggingFace model ID
 temperature = 0.2
 max_tokens = 64
 num_candidates = 3
 ```
 
-## その他のコマンド
+## Other Commands
 
 ```bash
-gac config   # 設定確認
-gac install  # 再インストール
-gac version  # バージョン確認
+gac config   # Show configuration
+gac version  # Show version
 ```
 
-## モデル情報
+## Model Information
 
-- **デフォルト**: Gemma 3 1B IT (Q4_K_M)
-- **サイズ**: ~700MB
-- **速度**: 高速（M1/M2/M3/M4で最適化）
+- **Default**: Gemma 2 2B IT
+- **Fast mode**: Gemma 3 1B IT (~2GB)
+- **Size**: ~4GB (default), ~2GB (fast)
+- **Speed**: Optimized for Apple Silicon (M1/M2/M3/M4)
 
-### カスタムモデル
+### Custom Models
 
+Edit `~/.gac/config.toml`:
 ```bash
-# config.tomlを編集
-model = "/path/to/your/model.gguf"
+model = "google/gemma-3-3b-it"  # or other HuggingFace models
 ```
 
-推奨モデル:
-- Gemma 3 (1B, 2B) - 軽量
-- Qwen2.5-Coder (1.5B, 3B) - コード特化
-- Phi-3 Mini - 超小型
+Recommended models:
+- Gemma 3 (1B, 3B) - Lightweight
+- Gemma 2 (2B, 9B) - Balanced
+- Qwen2.5-Coder - Code-specific
 
-## トラブルシューティング
+## Troubleshooting
 
-### インストール失敗
+### Slow generation
 
-```bash
-rm -rf ~/.gac
-gac install
-```
-
-### 生成が遅い
-
-`~/.gac/config.toml`を編集:
+Edit `~/.gac/config.toml`:
 ```toml
 max_tokens = 32
 temperature = 0.1
 ```
 
-## 開発
+### First run is slow
+
+The model downloads on first use (~2-4GB). Subsequent runs use the cached model and are much faster.
+
+## Development
 
 ```bash
 uv venv && source .venv/bin/activate
 uv pip install -e .
 ```
 
-## PyPIへの公開
+## Publishing to PyPI
 
 ```bash
-# PyPI APIトークンを取得 (初回のみ)
+# Get PyPI API token (first time only)
 # https://pypi.org/manage/account/token/
 
-# 環境変数に設定 (オプション)
+# Set environment variables (optional)
 export TWINE_USERNAME=__token__
 export TWINE_PASSWORD=your-pypi-token
 
-# 公開スクリプトを実行
+# Run publish script
 ./publish.sh
 ```
 
-公開後、ユーザーは以下でインストール可能:
+After publishing, users can install with:
 ```bash
 pip install gac
-# または
+# or
 uv pip install gac
 ```
 
-## ライセンス
+## License
 
 MIT
 
-## 謝辞
+## Credits
 
-- [llama.cpp](https://github.com/ggerganov/llama.cpp)
+- [Transformers](https://github.com/huggingface/transformers)
 - [Gemma 3](https://huggingface.co/google/gemma-3-1b-it)
 - [Typer](https://typer.tiangolo.com/)
 
