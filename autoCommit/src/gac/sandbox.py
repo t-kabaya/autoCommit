@@ -45,6 +45,7 @@ class TransformersLLM:
         try:
             from transformers import AutoModelForCausalLM, AutoTokenizer
             import torch
+            print('debug0.3')
 
             # Load tokenizer
             self.tokenizer = AutoTokenizer.from_pretrained(
@@ -53,11 +54,15 @@ class TransformersLLM:
                 local_files_only=True
             )
 
+            print('debug0.5')
+
             # Prepare model loading arguments
             model_kwargs = {
                 "trust_remote_code": True,
                 "low_cpu_mem_usage": True,
             }
+
+            print('debug1')
 
             # 4-bit quantization
             if self.use_4bit:
@@ -87,9 +92,11 @@ class TransformersLLM:
                 model_kwargs["torch_dtype"] = dtype
                 model_kwargs["device_map"] = device
 
+            print('debug2')
             # Load model
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_path,
+                local_files_only=True,
                 **model_kwargs
             )
 
@@ -112,8 +119,9 @@ class TransformersLLM:
             LLMError: If generation fails
         """
         try:
+            print('load_model')
             self._load_model()
-
+            print('verbose')
             if verbose:
                 print(f"\n[DEBUG] Model: {self.model_path}")
                 print(f"[DEBUG] Device: {self.device}")
@@ -232,3 +240,139 @@ class TransformersLLM:
 
 # Alias for backward compatibility
 LlamaLLM = TransformersLLM
+
+"""Configuration management for gac."""
+
+from pathlib import Path
+from typing import Optional
+import toml
+
+
+class Config:
+    """Configuration manager for gac."""
+
+    # Available models
+    MODELS = {
+        "small": "google/gemma-2-2b-it",  # ~2B, balanced (~4GB)
+        "medium": "google/gemma-3-3b-it",  # ~3B, powerful (~6GB)
+    }
+
+    # Fast mode: quantized model
+    FAST_MODEL = "google/gemma-3-1b-it"  # 4-bit quantized (~500MB)
+
+    DEFAULT_CONFIG = {
+        "model": "google/gemma-2-2b-it",  # HuggingFace model ID
+        "temperature": 0.2,
+        "max_tokens": 64,
+        "num_candidates": 3,
+    }
+
+    def __init__(self, config_path: Optional[Path] = None) -> None:
+        """Initialize config manager.
+
+        Args:
+            config_path: Path to config file. Defaults to ~/.gac/config.toml
+        """
+        if config_path is None:
+            config_path = Path.home() / ".gac" / "config.toml"
+        self.config_path = config_path
+        self._config = self._load_config()
+
+    def _load_config(self) -> dict:
+        """Load configuration from file or return defaults.
+
+        Returns:
+            Configuration dictionary
+        """
+        if not self.config_path.exists():
+            return self.DEFAULT_CONFIG.copy()
+
+        try:
+            with open(self.config_path, "r") as f:
+                loaded_config = toml.load(f)
+            # Merge with defaults
+            config = self.DEFAULT_CONFIG.copy()
+            config.update(loaded_config)
+            return config
+        except Exception:
+            return self.DEFAULT_CONFIG.copy()
+
+    def save(self) -> None:
+        """Save current configuration to file."""
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.config_path, "w") as f:
+            toml.dump(self._config, f)
+
+    def get(self, key: str, default: Optional[str] = None) -> str:
+        """Get configuration value.
+
+        Args:
+            key: Configuration key
+            default: Default value if key not found
+
+        Returns:
+            Configuration value
+        """
+        return self._config.get(key, default)
+
+    def set(self, key: str, value: str) -> None:
+        """Set configuration value.
+
+        Args:
+            key: Configuration key
+            value: Configuration value
+        """
+        self._config[key] = value
+
+    @property
+    def model_path(self) -> str:
+        """Get model ID or path."""
+        return self.get("model", "google/gemma-2-2b-it")
+
+    @property
+    def temperature(self) -> float:
+        """Get temperature setting."""
+        return float(self.get("temperature", "0.2"))
+
+    @property
+    def max_tokens(self) -> int:
+        """Get max tokens setting."""
+        return int(self.get("max_tokens", "64"))
+
+    @property
+    def num_candidates(self) -> int:
+        """Get number of candidates to generate."""
+        return int(self.get("num_candidates", "3"))
+
+    def is_configured(self) -> bool:
+        """Check if gac is properly configured.
+
+        Returns:
+            True if model is specified
+        """
+        return bool(self.model_path)
+
+    def __str__(self) -> str:
+        """String representation of config."""
+        lines = ["Current Configuration:"]
+        for key, value in self._config.items():
+            lines.append(f"  {key}: {value}")
+        return "\n".join(lines)
+
+config = Config()
+
+
+llm = LlamaLLM(
+    model_path=config.model_path,
+    temperature=config.temperature,
+    max_tokens=config.max_tokens,
+)
+
+print(llm)
+            
+candidates = llm.generate(
+    "hi",
+    True
+)
+
+print(candidates)
