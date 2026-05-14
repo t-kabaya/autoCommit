@@ -131,8 +131,8 @@ MIT
 
 ## Credits
 
-- [Transformers](https://github.com/huggingface/transformers)
-- [Gemma 3](https://huggingface.co/google/gemma-3-1b-it)
-- [Typer](https://typer.tiangolo.com/)
+- [Transformers](https://github.com/huggingface/transformers) - LLM framework
+- [Gemma 3](https://huggingface.co/google/gemma-3-1b-it) - Language model
+- [Typer](https://typer.tiangolo.com/) - CLI framework
 
 

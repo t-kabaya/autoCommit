@@ -219,23 +219,32 @@ class TransformersLLM:
         # Remove leading/trailing whitespace
         output = output.strip()
 
+        # Remove markdown code blocks first
+        if "```" in output:
+            # Extract content between code blocks or remove them
+            parts = output.split("```")
+            if len(parts) >= 2:
+                # Get the content between first ``` and second ```
+                output = parts[1].strip() if len(parts) >= 3 else parts[0].strip()
+
         # Take first line (commit messages are single line)
         lines = [line.strip() for line in output.split("\n") if line.strip()]
         if lines:
             output = lines[0]
 
+        # Remove list markers (-, *, 1., etc.)
+        import re
+        output = re.sub(r'^[-*]\s+', '', output)
+        output = re.sub(r'^\d+\.\s+', '', output)
+
         # Remove quotes
         output = output.strip('"\'`')
 
         # Remove common prefixes
-        prefixes = ["commit message:", "commit:", "message:", "answer:", "response:"]
+        prefixes = ["commit message:", "commit:", "message:", "answer:", "response:", "type:", "description:"]
         for prefix in prefixes:
             if output.lower().startswith(prefix):
                 output = output[len(prefix):].strip()
-
-        # Remove markdown code blocks
-        if output.startswith("```") and output.endswith("```"):
-            output = output[3:-3].strip()
 
         # Add conventional commit type if missing
         types = ["feat", "fix", "docs", "style", "refactor", "test", "chore"]

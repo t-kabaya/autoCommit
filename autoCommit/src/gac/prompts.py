@@ -25,16 +25,17 @@ def build_commit_prompt(
     if len(diff) > 3000:
         diff = diff[:3000] + "\n... (diff truncated)"
 
-    prompt = f"""Write ONE line commit message for these changes.
-Format: type: description (feat/fix/docs/style/refactor/test/chore)
-Max 30 characters.
+    prompt = f"""Generate a single commit message for this change.
 
-Files: {', '.join(changed_files[:3])}
-Recent: {recent_commits[0] if recent_commits else 'None'}
+Recent commit: {recent_commits[0] if recent_commits else 'None'}
 
-{diff[:500]}
+Changed files:
+{files_str}
 
-Commit:"""
+Diff:
+{diff[:800]}
+
+Write only the commit message (one line):"""
 
     return prompt
 
