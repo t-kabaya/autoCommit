@@ -1,0 +1,181 @@
+INFO:__main__:Loading CommitPackFT dataset...
+INFO:httpx:HTTP Request: HEAD https://s3.amazonaws.com/datasets.huggingface.co/datasets/datasets/json/json.py "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/datasets/bigcode/commitpackft "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/datasets/bigcode/commitpackft/tree/main/data%2Fpython?recursive=false&expand=false "HTTP/1.1 200 OK"
+INFO:__main__:Loaded 10 samples
+INFO:__main__:Loading model: google/gemma-2-2b
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/google/gemma-2-2b/resolve/main/config.json "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/google/gemma-2-2b/resolve/main/tokenizer_config.json "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/models/google/gemma-2-2b/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/models/google/gemma-2-2b/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+INFO:__main__:Tokenizer loaded successfully
+INFO:__main__:Using device: cpu
+INFO:__main__:Loading model in FP32 (CPU mode or non-quantized)
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/google/gemma-2-2b/resolve/main/config.json "HTTP/1.1 200 OK"
+`torch_dtype` is deprecated! Use `dtype` instead!
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/google/gemma-2-2b/resolve/main/config.json "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/models/google/gemma-2-2b/revision/main "HTTP/1.1 200 OK"
+Fetching 3 files:   0%|          | 0/3 [00:00<?, ?it/s]INFO:httpx:HTTP Request: HEAD https://huggingface.co/google/gemma-2-2b/resolve/c5ebcd40d208330abc697524c919956e692655cf/model-00001-of-00003.safetensors "HTTP/1.1 302 Found"
+/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/file_download.py:760: UserWarning: Not enough free disk space to download the file. The expected file size is: 4992.58 MB. The target location /Users/kaba/.cache/huggingface/hub/models--google--gemma-2-2b/blobs only has 3141.95 MB free disk space.
+  warnings.warn(
+INFO:httpx:HTTP Request: HEAD https://huggingface.co/google/gemma-2-2b/resolve/c5ebcd40d208330abc697524c919956e692655cf/model-00002-of-00003.safetensors "HTTP/1.1 302 Found"
+/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/file_download.py:760: UserWarning: Not enough free disk space to download the file. The expected file size is: 4983.44 MB. The target location /Users/kaba/.cache/huggingface/hub/models--google--gemma-2-2b/blobs only has 3141.94 MB free disk space.
+  warnings.warn(
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/models/google/gemma-2-2b/xet-read-token/c5ebcd40d208330abc697524c919956e692655cf "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/models/google/gemma-2-2b/xet-read-token/c5ebcd40d208330abc697524c919956e692655cf "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/models/google/gemma-2-2b/xet-read-token/c5ebcd40d208330abc697524c919956e692655cf "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/models/google/gemma-2-2b/xet-read-token/c5ebcd40d208330abc697524c919956e692655cf "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET https://huggingface.co/api/models/google/gemma-2-2b/xet-read-token/c5ebcd40d208330abc697524c919956e692655cf "HTTP/1.1 200 OK"
+Fetching 3 files:   0%|          | 0/3 [3:05:17<?, ?it/s]
+ERROR:__main__:Error loading model: Data processing error: CAS service error : Reqwest Error: HTTP status client error (401 Unauthorized), domain: https://cas-server.xethub.hf.co/reconstructions/2b5ccd575bfbd550f2480c512fe77db5f002ca61db1003f7632219798fa9e8b5
+INFO:__main__:
+Troubleshooting tips:
+INFO:__main__:1. Make sure you're logged in to Hugging Face: huggingface-cli login
+INFO:__main__:2. Accept the Gemma license at: https://huggingface.co/google/gemma-2-2b
+INFO:__main__:3. Check your internet connection
+Traceback (most recent call last):
+  File "/Users/kaba/kbyProject/autoCommit/FT/finetune_gemma.py", line 247, in <module>
+    train_model(
+    ~~~~~~~~~~~^
+        model_name=args.model_name,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        learning_rate=args.learning_rate,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kaba/kbyProject/autoCommit/FT/finetune_gemma.py", line 172, in train_model
+    model, tokenizer = setup_lora_model(model_name, use_8bit=use_8bit)
+                       ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/kaba/kbyProject/autoCommit/FT/finetune_gemma.py", line 122, in setup_lora_model
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        torch_dtype=torch.float32,
+        trust_remote_code=True,
+    )
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/transformers/models/auto/auto_factory.py", line 372, in from_pretrained
+    return model_class.from_pretrained(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        pretrained_model_name_or_path, *model_args, config=config, **hub_kwargs, **kwargs
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/transformers/modeling_utils.py", line 4038, in from_pretrained
+    checkpoint_files, sharded_metadata = _get_resolved_checkpoint_files(
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        pretrained_model_name_or_path=pretrained_model_name_or_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        transformers_explicit_filename=getattr(config, "transformers_weights", None),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/transformers/modeling_utils.py", line 760, in _get_resolved_checkpoint_files
+    checkpoint_files, sharded_metadata = get_checkpoint_shard_files(
+                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        pretrained_model_name_or_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+        _commit_hash=commit_hash,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/transformers/utils/hub.py", line 869, in get_checkpoint_shard_files
+    cached_filenames = cached_files(
+        pretrained_model_name_or_path,
+    ...<9 lines>...
+        _commit_hash=_commit_hash,
+    )
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/transformers/utils/hub.py", line 507, in cached_files
+    raise e
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/transformers/utils/hub.py", line 433, in cached_files
+    snapshot_download(
+    ~~~~~~~~~~~~~~~~~^
+        path_or_repo_id,
+        ^^^^^^^^^^^^^^^^
+    ...<8 lines>...
+        local_files_only=local_files_only,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/_snapshot_download.py", line 449, in snapshot_download
+    thread_map(
+    ~~~~~~~~~~^
+        _inner_hf_hub_download,
+        ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        tqdm_class=tqdm_class,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/tqdm/contrib/concurrent.py", line 69, in thread_map
+    return _executor_map(ThreadPoolExecutor, fn, *iterables, **tqdm_kwargs)
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/tqdm/contrib/concurrent.py", line 51, in _executor_map
+    return list(tqdm_class(ex.map(fn, *iterables, chunksize=chunksize), **kwargs))
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/tqdm/std.py", line 1181, in __iter__
+    for obj in iterable:
+               ^^^^^^^^
+  File "/Users/kaba/miniconda3/lib/python3.13/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/kaba/miniconda3/lib/python3.13/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ~~~~~~~~~~^^^^^^^^^
+  File "/Users/kaba/miniconda3/lib/python3.13/concurrent/futures/_base.py", line 456, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/Users/kaba/miniconda3/lib/python3.13/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/Users/kaba/miniconda3/lib/python3.13/concurrent/futures/thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/_snapshot_download.py", line 429, in _inner_hf_hub_download
+    hf_hub_download(  # type: ignore
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+        repo_id,
+        ^^^^^^^^
+    ...<14 lines>...
+        dry_run=dry_run,
+        ^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1024, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+        # Destination
+    ...<15 lines>...
+        dry_run=dry_run,
+    )
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1240, in _hf_hub_download_to_cache_dir
+    _download_to_tmp_and_move(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        incomplete_path=Path(blob_path + ".incomplete"),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<8 lines>...
+        tqdm_class=tqdm_class,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1864, in _download_to_tmp_and_move
+    xet_get(
+    ~~~~~~~^
+        incomplete_path=incomplete_path,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        tqdm_class=tqdm_class,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/kaba/miniconda3/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 588, in xet_get
+    download_files(
+    ~~~~~~~~~~~~~~^
+        xet_download_info,
+        ^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        progress_updater=[progress_updater],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+RuntimeError: Data processing error: CAS service error : Reqwest Error: HTTP status client error (401 Unauthorized), domain: https://cas-server.xethub.hf.co/reconstructions/2b5ccd575bfbd550f2480c512fe77db5f002ca61db1003f7632219798fa9e8b5

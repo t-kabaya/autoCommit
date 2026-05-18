@@ -1,0 +1,41 @@
+# Fine-tuning configuration for Gemma 2B on CommitPackFT
+
+model:
+  name: "google/gemma-2-2b"
+  # Alternative models you can try:
+  # name: "google/gemma-2-2b-it"  # Instruction-tuned version
+
+training:
+  output_dir: "../models/gemma-2b-commitpack-ft"
+  num_samples: 1000  # Start small, increase to 10000+ for better results
+  num_epochs: 3
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 2e-4
+  max_length: 512
+
+  # Advanced settings
+  warmup_steps: 100
+  logging_steps: 10
+  save_steps: 100
+  eval_steps: 100
+
+lora:
+  r: 16  # LoRA rank, higher = more parameters but better quality
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+
+dataset:
+  name: "bigcode/commitpackft"
+  language: "python"
+  split: 0.1  # 10% for validation
+
+hardware:
+  use_8bit: true
+  use_fp16: true
+  device_map: "auto"
