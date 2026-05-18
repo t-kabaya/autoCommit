@@ -193,15 +193,14 @@ def train_model(
         learning_rate=learning_rate,
         lr_scheduler_type="cosine",
         warmup_steps=100,
-        logging_steps=10,
-        save_steps=100,
-        eval_steps=100,
-        eval_strategy="steps",  # Changed from evaluation_strategy
-        save_total_limit=3,
+        logging_steps=50,
+        save_strategy="no",  # Disable checkpoint saving to save disk space
+        eval_strategy="no",  # Disable evaluation during training to save disk space
+        save_total_limit=1,  # Keep only 1 checkpoint if saving
         fp16=use_cuda,  # Only use FP16 with CUDA
         push_to_hub=False,
-        report_to=["tensorboard"],
-        load_best_model_at_end=True,
+        report_to=[],  # Disable tensorboard to save disk space
+        load_best_model_at_end=False,  # Disable to save disk space
     )
 
     # Data collator

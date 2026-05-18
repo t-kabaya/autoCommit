@@ -104,13 +104,13 @@ def train_model(
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         learning_rate=learning_rate,
-        logging_steps=10,
-        save_steps=50,
-        eval_steps=50,
-        eval_strategy="steps",  # Changed from evaluation_strategy
-        save_total_limit=2,
+        logging_steps=50,
+        save_strategy="no",  # Disable checkpoint saving to save disk space
+        eval_strategy="no",  # Disable evaluation during training to save disk space
+        save_total_limit=1,  # Keep only 1 checkpoint if saving
         push_to_hub=False,
-        report_to=["tensorboard"],
+        report_to=[],  # Disable tensorboard to save disk space
+        load_best_model_at_end=False,  # Disable to save disk space
     )
 
     # Data collator
