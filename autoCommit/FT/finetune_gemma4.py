@@ -1,5 +1,5 @@
 """
-Fine-tune Gemma 2B model on CommitPackFT dataset for commit message generation
+Fine-tune Gemma 4 E2B model on CommitPackFT dataset for commit message generation
 """
 import os
 import torch
@@ -89,8 +89,8 @@ def preprocess_dataset(dataset, tokenizer, max_length=512):
     return tokenized
 
 
-def setup_lora_model(model_name="google/gemma-2-2b", use_8bit=True):
-    """Setup model with LoRA for efficient fine-tuning"""
+def setup_lora_model(model_name="google/gemma-4-E2B", use_8bit=True):
+    """Setup Gemma 4 model with LoRA for efficient fine-tuning"""
     logger.info(f"Loading model: {model_name}")
 
     try:
@@ -129,7 +129,7 @@ def setup_lora_model(model_name="google/gemma-2-2b", use_8bit=True):
 
         logger.info("Model loaded successfully")
 
-        # Configure LoRA
+        # Configure LoRA for Gemma 4
         lora_config = LoraConfig(
             r=16,  # LoRA rank
             lora_alpha=32,
@@ -149,20 +149,20 @@ def setup_lora_model(model_name="google/gemma-2-2b", use_8bit=True):
         logger.error(f"Error loading model: {e}")
         logger.info("\nTroubleshooting tips:")
         logger.info("1. Make sure you're logged in to Hugging Face: huggingface-cli login")
-        logger.info("2. Accept the Gemma license at: https://huggingface.co/google/gemma-2-2b")
+        logger.info("2. Accept the Gemma license at: https://huggingface.co/google/gemma-4-E2B")
         logger.info("3. Check your internet connection")
         raise
 
 
 def train_model(
-    model_name="google/gemma-2-2b",
-    output_dir="../models/gemma-2b-commitpack-ft",
+    model_name="google/gemma-4-E2B",
+    output_dir="../models/gemma-4-E2B-commitpack-ft",
     num_samples=1000,
     num_epochs=3,
     batch_size=4,
     learning_rate=2e-4,
 ):
-    """Main training function"""
+    """Main training function for Gemma 4 E2B"""
 
     # Load dataset
     dataset = load_commitpack_dataset(num_samples=num_samples)
@@ -233,9 +233,9 @@ def train_model(
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Fine-tune Gemma 2B on CommitPackFT")
-    parser.add_argument("--model_name", type=str, default="google/gemma-2-2b", help="Model name or path")
-    parser.add_argument("--output_dir", type=str, default="../models/gemma-2b-commitpack-ft", help="Output directory")
+    parser = argparse.ArgumentParser(description="Fine-tune Gemma 4 E2B on CommitPackFT")
+    parser.add_argument("--model_name", type=str, default="google/gemma-4-E2B", help="Model name or path")
+    parser.add_argument("--output_dir", type=str, default="../models/gemma-4-E2B-commitpack-ft", help="Output directory")
     parser.add_argument("--num_samples", type=int, default=1000, help="Number of samples to use")
     parser.add_argument("--num_epochs", type=int, default=3, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=4, help="Batch size")
