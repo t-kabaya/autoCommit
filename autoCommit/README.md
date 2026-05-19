@@ -97,6 +97,108 @@ temperature = 0.1
 
 The model downloads on first use (~2-4GB). Subsequent runs use the cached model and are much faster.
 
+## Dataset
+
+This project uses the [CommitPackFT](https://huggingface.co/datasets/bigcode/commitpackft) dataset for fine-tuning commit message generation models.
+
+### Dataset Examples
+
+**Original CommitPackFT (Python) - 56,025 samples**
+
+Sample commit messages from the dataset:
+
+```json
+{
+  "commit": "e905334869af72025592de586b81650cb3468b8a",
+  "old_file": "sentry/queue/client.py",
+  "new_file": "sentry/queue/client.py",
+  "subject": "Declare queues when broker is instantiated",
+  "message": "Declare queues when broker is instantiated\n",
+  "lang": "Python",
+  "license": "bsd-3-clause"
+}
+```
+
+```json
+{
+  "subject": "Fix % only showing 0 or 100%, everything between goes to 0%.",
+  "old_file": "src/dashboard/src/main/templatetags/percentage.py"
+}
+```
+
+```json
+{
+  "subject": "Remove 'validation' from RejectionException docstring",
+  "old_file": "automata/base/exceptions.py"
+}
+```
+
+### Filtered Dataset - 33,510 samples (59.81%)
+
+Filtered to include only commits starting with action verbs:
+- Add (additions)
+- Fix (bug fixes)
+- Update (updates)
+- Remove (deletions)
+- Refactor (code improvements)
+
+**Examples:**
+
+```json
+{
+  "subject": "Fix interpretation of parameters for names list modification",
+  "old_file": "txircd/modules/umode_i.py"
+}
+```
+
+```json
+{
+  "subject": "Add missing 'add' line",
+  "old_file": "main.py"
+}
+```
+
+```json
+{
+  "subject": "Update the utils.py to include the new version",
+  "old_file": "utils.py"
+}
+```
+
+### Dataset Statistics
+
+| Dataset | Samples | Match Rate | Format |
+|---------|---------|------------|--------|
+| CommitPackFT (Python) | 56,025 | 100% | Natural language |
+| Filtered (Action verbs) | 33,510 | 59.81% | Verb-first format |
+
+### Using the Dataset
+
+Load the full dataset:
+```python
+from datasets import load_dataset
+
+dataset = load_dataset(
+    "json",
+    data_files="hf://datasets/bigcode/commitpackft/data/python/data.jsonl"
+)
+```
+
+Load the filtered dataset:
+```python
+dataset = load_dataset("json", data_files="datasets/commitpack/filtered_commitpack.jsonl")
+```
+
+### Dataset Filtering
+
+See `datasets/commitpack/filter_dataset.py` for filtering by commit type:
+
+```bash
+python datasets/commitpack/filter_dataset.py \
+  --types "Add,Fix,Update,Remove,Refactor" \
+  --output filtered_commitpack.jsonl
+```
+
 ## Development
 
 ```bash
