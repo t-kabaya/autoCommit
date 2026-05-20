@@ -1,5 +1,6 @@
 """
 Fine-tune Gemma 2B model on CommitPackFT dataset for commit message generation
+Based on official Gemma PEFT guide: https://huggingface.co/blog/gemma-peft
 """
 import os
 import torch
@@ -7,9 +8,10 @@ from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
+    BitsAndBytesConfig,
     TrainingArguments,
     Trainer,
-    DataCollatorForLanguageModeling,
+    DataCollatorForSeq2Seq,
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import logging
@@ -65,23 +67,21 @@ NEW:
 
 def preprocess_dataset(dataset, tokenizer, max_length=512):
     """Preprocess dataset by tokenizing"""
-    def tokenize_function(examples):
-        prompts = [format_prompt(sample) for sample in examples]
-        return tokenizer(
-            prompts,
+    def tokenize_function(example):
+        prompt = format_prompt(example)
+        result = tokenizer(
+            prompt,
             truncation=True,
             max_length=max_length,
-            padding="max_length",
+            padding=False,  # Use dynamic padding instead of max_length
         )
-
-    # Convert to list of dicts format
-    samples = []
-    for i in range(len(dataset['train'])):
-        samples.append(dataset['train'][i])
+        # Add labels (for causal LM, labels are the same as input_ids)
+        result["labels"] = result["input_ids"].copy()
+        return result
 
     logger.info("Tokenizing dataset...")
     tokenized = dataset.map(
-        lambda examples: tokenize_function([examples]),
+        tokenize_function,
         batched=False,
         remove_columns=dataset['train'].column_names,
     )
@@ -89,8 +89,22 @@ def preprocess_dataset(dataset, tokenizer, max_length=512):
     return tokenized
 
 
-def setup_lora_model(model_name="google/gemma-2-2b-it", use_8bit=True):
-    """Setup Gemma 2B model with LoRA for efficient fine-tuning"""
+def setup_lora_model(model_name="google/gemma-2-2b-it", use_4bit=True):
+    """
+    Setup Gemma 2B model with LoRA for efficient fine-tuning
+
+    Following official Gemma PEFT guide configuration:
+    - 4-bit quantization with nf4 type (more efficient than 8-bit)
+    - LoRA rank=8 targeting all linear layers
+    - bfloat16 compute dtype for better numerical stability
+
+    Args:
+        model_name: HuggingFace model ID or local path
+        use_4bit: Whether to use 4-bit quantization (default: True)
+
+    Returns:
+        tuple: (model, tokenizer)
+    """
     logger.info(f"Loading model: {model_name}")
 
     try:
@@ -102,40 +116,48 @@ def setup_lora_model(model_name="google/gemma-2-2b-it", use_8bit=True):
         logger.info("Tokenizer loaded successfully")
 
         # Check if CUDA is available
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        logger.info(f"Using device: {device}")
+        use_cuda = torch.cuda.is_available()
+        logger.info(f"CUDA available: {use_cuda}")
 
-        # Load model with appropriate settings
-        if use_8bit and torch.cuda.is_available():
-            logger.info("Loading model with 8-bit quantization")
+        # Load model with quantization settings (official Gemma guide)
+        if use_4bit and use_cuda:
+            logger.info("Loading model with 4-bit quantization (nf4)")
+
+            # BitsAndBytes config for 4-bit quantization
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",  # NormalFloat4 quantization
+                bnb_4bit_compute_dtype=torch.bfloat16  # Compute in bfloat16
+            )
+
             model = AutoModelForCausalLM.from_pretrained(
                 model_name,
-                load_in_8bit=True,
+                quantization_config=bnb_config,
                 device_map="auto",
-                torch_dtype=torch.float16,
                 trust_remote_code=True,
             )
+
             # Prepare model for k-bit training
             model = prepare_model_for_kbit_training(model)
         else:
-            logger.info("Loading model in FP32 (CPU mode or non-quantized)")
+            logger.info("Loading model without quantization (FP32/FP16)")
             model = AutoModelForCausalLM.from_pretrained(
                 model_name,
-                torch_dtype=torch.float32,
+                torch_dtype=torch.float16 if use_cuda else torch.float32,
+                device_map="auto" if use_cuda else None,
                 trust_remote_code=True,
             )
-            if device == "cuda":
-                model = model.to(device)
 
         logger.info("Model loaded successfully")
 
-        # Configure LoRA
+        # Configure LoRA (official Gemma guide configuration)
+        # Targets all linear layers in the transformer
         lora_config = LoraConfig(
-            r=16,  # LoRA rank
-            lora_alpha=32,
-            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-            lora_dropout=0.05,
-            bias="none",
+            r=8,  # LoRA rank (official guide uses r=8)
+            target_modules=[
+                "q_proj", "k_proj", "v_proj", "o_proj",  # Attention layers
+                "gate_proj", "up_proj", "down_proj"       # MLP layers
+            ],
             task_type="CAUSAL_LM",
         )
 
@@ -151,6 +173,7 @@ def setup_lora_model(model_name="google/gemma-2-2b-it", use_8bit=True):
         logger.info("1. Make sure you're logged in to Hugging Face: huggingface-cli login")
         logger.info("2. Accept the Gemma license at: https://huggingface.co/google/gemma-2-2b-it")
         logger.info("3. Check your internet connection")
+        logger.info("4. Install bitsandbytes: pip install bitsandbytes")
         raise
 
 
@@ -167,9 +190,9 @@ def train_model(
     # Load dataset
     dataset = load_commitpack_dataset(num_samples=num_samples)
 
-    # Setup model and tokenizer
-    use_8bit = torch.cuda.is_available()
-    model, tokenizer = setup_lora_model(model_name, use_8bit=use_8bit)
+    # Setup model and tokenizer with 4-bit quantization
+    use_4bit = torch.cuda.is_available()
+    model, tokenizer = setup_lora_model(model_name, use_4bit=use_4bit)
 
     # Preprocess dataset
     tokenized_dataset = preprocess_dataset(dataset, tokenizer)
@@ -182,7 +205,7 @@ def train_model(
     logger.info(f"Train samples: {len(train_dataset)}")
     logger.info(f"Eval samples: {len(eval_dataset)}")
 
-    # Training arguments
+    # Training arguments (official Gemma guide configuration)
     use_cuda = torch.cuda.is_available()
     training_args = TrainingArguments(
         output_dir=output_dir,
@@ -190,23 +213,27 @@ def train_model(
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         gradient_accumulation_steps=4,
-        learning_rate=learning_rate,
+        learning_rate=learning_rate,  # Official guide: 2e-4
         lr_scheduler_type="cosine",
         warmup_steps=100,
         logging_steps=50,
-        save_strategy="no",  # Disable checkpoint saving to save disk space
-        eval_strategy="no",  # Disable evaluation during training to save disk space
-        save_total_limit=1,  # Keep only 1 checkpoint if saving
-        fp16=use_cuda,  # Only use FP16 with CUDA
+        save_strategy="epoch",  # Save at end of each epoch
+        eval_strategy="epoch",  # Evaluate at end of each epoch
+        save_total_limit=2,  # Keep last 2 checkpoints
+        fp16=use_cuda,  # Mixed precision training
+        optim="paged_adamw_8bit" if use_cuda else "adamw_torch",  # Official guide: paged_adamw_8bit
         push_to_hub=False,
-        report_to=[],  # Disable tensorboard to save disk space
-        load_best_model_at_end=False,  # Disable to save disk space
+        report_to=["tensorboard"],  # Enable tensorboard logging
+        load_best_model_at_end=True,  # Load best model at end
+        metric_for_best_model="loss",
     )
 
-    # Data collator
-    data_collator = DataCollatorForLanguageModeling(
+    # Data collator with dynamic padding
+    data_collator = DataCollatorForSeq2Seq(
         tokenizer=tokenizer,
-        mlm=False,
+        model=model,
+        padding=True,
+        pad_to_multiple_of=8,  # Pad to multiple of 8 for efficiency
     )
 
     # Initialize trainer
