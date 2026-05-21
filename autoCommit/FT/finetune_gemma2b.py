@@ -36,41 +36,35 @@ def load_commitpack_dataset(num_samples=None):
 
 
 def format_prompt(sample):
-    """Format a sample into a prompt for commit message generation"""
+    """Format a sample into input (diff only) and output (commit message)"""
     old_contents = sample.get('old_contents', '')
     new_contents = sample.get('new_contents', '')
+    old_file = sample.get('old_file', '')
+    new_file = sample.get('new_file', '')
     subject = sample.get('subject', '')
-    message = sample.get('message', '')
 
-    # Create a diff-like representation (simplified)
-    prompt = f"""### Instruction:
-Generate a commit message for the following code changes.
+    # Input: unified diff format only
+    diff = f"""diff --git a/{old_file} b/{new_file}
+--- a/{old_file}
++++ b/{new_file}
+@@ @@
+-{old_contents[:300]}
++{new_contents[:300]}"""
 
-### Code Changes:
-Old file: {sample.get('old_file', '')}
-New file: {sample.get('new_file', '')}
+    # Output: commit message
+    # Combine input and output for training
+    full_text = f"{diff}\n{subject}"
 
-### Diff:
-OLD:
-{old_contents[:500]}
-
-NEW:
-{new_contents[:500]}
-
-### Commit Message:
-{subject}
-
-{message}"""
-
-    return prompt
+    return {"input": diff, "output": subject, "text": full_text}
 
 
 def preprocess_dataset(dataset, tokenizer, max_length=512):
-    """Preprocess dataset by tokenizing"""
+    """Preprocess dataset by tokenizing - diff as input, commit message as output"""
     def tokenize_function(example):
-        prompt = format_prompt(example)
+        formatted = format_prompt(example)
+        # Use the full text (diff + commit message) for training
         result = tokenizer(
-            prompt,
+            formatted["text"],
             truncation=True,
             max_length=max_length,
             padding=False,  # Use dynamic padding instead of max_length
