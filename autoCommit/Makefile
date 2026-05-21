@@ -1,4 +1,4 @@
-.PHONY: help install download-model ft-gemma2b ft-test clean disk-usage check-memory
+.PHONY: help install download-model ft-gemma2b ft-test test-gemma2-output clean disk-usage check-memory
 
 help:
 	@echo "Available commands:"
@@ -6,6 +6,7 @@ help:
 	@echo "  make download-model  - Download Gemma 2B model to models folder"
 	@echo "  make ft-gemma2b      - Fine-tune Gemma 2B (full training)"
 	@echo "  make ft-test         - Fine-tune Gemma 2B (quick test with 100 samples)"
+	@echo "  make test-gemma2-output - Test fine-tuned Gemma 2B model with 3 sample inputs"
 	@echo "  make disk-usage      - Check disk usage of project and models"
 	@echo "  make check-memory    - Check system memory and GPU memory for fine-tuning"
 	@echo "  make clean           - Clean up generated files"
@@ -35,6 +36,80 @@ ft-test:
 		--num_epochs 1 \
 		--batch_size 2 \
 		--learning_rate 2e-4
+
+# Test fine-tuned Gemma 2B model with 3 sample diffs and output commit messages
+# Input 1: New feature (authentication check)
+# Input 2: Bug fix (null check for price)
+# Input 3: Refactoring (SQL injection prevention)
+test-gemma2-output:
+	@echo "=== Testing Fine-tuned Gemma 2B Model Output ==="
+	@echo ""
+	@echo "Input 1: Add new feature (authentication check)"
+	@echo "Diff:"
+	@echo "  +    if user.is_authenticated():"
+	@echo "  +        return dashboard()"
+	@echo "  +    else:"
+	@echo "  +        return login_page()"
+	@echo ""
+	@echo "Expected:"
+	@echo "  feat: Add authentication check to main function"
+	@echo ""
+	@echo "Actual Output:"
+	@. venv/bin/activate && python -c "import warnings; warnings.filterwarnings('ignore'); import os; os.environ['TRANSFORMERS_VERBOSITY']='error'; from transformers import AutoTokenizer, AutoModelForCausalLM; import torch; \
+		model = AutoModelForCausalLM.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True, device_map='auto', torch_dtype=torch.float16); \
+		tokenizer = AutoTokenizer.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True); \
+		diff = '''diff --git a/app.py b/app.py\nindex 1234567..abcdefg 100644\n--- a/app.py\n+++ b/app.py\n@@ -10,6 +10,10 @@ def main():\n+    if user.is_authenticated():\n+        return dashboard()\n+    else:\n+        return login_page()'''; \
+		prompt = f'Generate a commit message for the following diff:\n{diff}\n\nCommit message:'; \
+		inputs = tokenizer(prompt, return_tensors='pt').to(model.device); \
+		outputs = model.generate(**inputs, max_new_tokens=50, do_sample=True, temperature=0.7); \
+		result = tokenizer.decode(outputs[0], skip_special_tokens=True).split('Commit message:')[-1].strip(); \
+		print('  ' + result.replace('\n', '\n  '))" 2>/dev/null
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "Input 2: Fix bug (null check for price)"
+	@echo "Diff:"
+	@echo "  -    return sum(item.price for item in items)"
+	@echo "  +    return sum(item.price for item in items if item.price is not None)"
+	@echo ""
+	@echo "Expected:"
+	@echo "  fix: Add null check for item price in calculate_total"
+	@echo ""
+	@echo "Actual Output:"
+	@. venv/bin/activate && python -c "import warnings; warnings.filterwarnings('ignore'); import os; os.environ['TRANSFORMERS_VERBOSITY']='error'; from transformers import AutoTokenizer, AutoModelForCausalLM; import torch; \
+		model = AutoModelForCausalLM.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True, device_map='auto', torch_dtype=torch.float16); \
+		tokenizer = AutoTokenizer.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True); \
+		diff = '''diff --git a/utils.py b/utils.py\nindex 2345678..bcdefgh 100644\n--- a/utils.py\n+++ b/utils.py\n@@ -15,7 +15,7 @@ def calculate_total(items):\n-    return sum(item.price for item in items)\n+    return sum(item.price for item in items if item.price is not None)'''; \
+		prompt = f'Generate a commit message for the following diff:\n{diff}\n\nCommit message:'; \
+		inputs = tokenizer(prompt, return_tensors='pt').to(model.device); \
+		outputs = model.generate(**inputs, max_new_tokens=50, do_sample=True, temperature=0.7); \
+		result = tokenizer.decode(outputs[0], skip_special_tokens=True).split('Commit message:')[-1].strip(); \
+		print('  ' + result.replace('\n', '\n  '))" 2>/dev/null
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "Input 3: Refactor code (SQL injection prevention)"
+	@echo "Diff:"
+	@echo "  -    def get_user(self, id):"
+	@echo "  -        return self.query(f\"SELECT * FROM users WHERE id={id}\")"
+	@echo "  +    def get_user(self, user_id):"
+	@echo "  +        return self.query(\"SELECT * FROM users WHERE id=?\", (user_id,))"
+	@echo ""
+	@echo "Expected:"
+	@echo "  refactor: Use parameterized query to prevent SQL injection in get_user"
+	@echo ""
+	@echo "Actual Output:"
+	@. venv/bin/activate && python -c "import warnings; warnings.filterwarnings('ignore'); import os; os.environ['TRANSFORMERS_VERBOSITY']='error'; from transformers import AutoTokenizer, AutoModelForCausalLM; import torch; \
+		model = AutoModelForCausalLM.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True, device_map='auto', torch_dtype=torch.float16); \
+		tokenizer = AutoTokenizer.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True); \
+		diff = '''diff --git a/db.py b/db.py\nindex 3456789..cdefghi 100644\n--- a/db.py\n+++ b/db.py\n@@ -20,10 +20,8 @@ class Database:\n-    def get_user(self, id):\n-        return self.query(f\"SELECT * FROM users WHERE id={id}\")\n+    def get_user(self, user_id):\n+        return self.query(\"SELECT * FROM users WHERE id=?\", (user_id,))'''; \
+		prompt = f'Generate a commit message for the following diff:\n{diff}\n\nCommit message:'; \
+		inputs = tokenizer(prompt, return_tensors='pt').to(model.device); \
+		outputs = model.generate(**inputs, max_new_tokens=50, do_sample=True, temperature=0.7); \
+		result = tokenizer.decode(outputs[0], skip_special_tokens=True).split('Commit message:')[-1].strip(); \
+		print('  ' + result.replace('\n', '\n  '))" 2>/dev/null
+	@echo ""
+	@echo "=== Test Complete ==="
 
 disk-usage:
 	@echo "=== System Disk Space ==="
