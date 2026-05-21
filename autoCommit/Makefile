@@ -59,11 +59,11 @@ test-gemma2-output:
 		model = AutoModelForCausalLM.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True, device_map='auto', torch_dtype=torch.float16); \
 		tokenizer = AutoTokenizer.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True); \
 		diff = '''diff --git a/app.py b/app.py\nindex 1234567..abcdefg 100644\n--- a/app.py\n+++ b/app.py\n@@ -10,6 +10,10 @@ def main():\n+    if user.is_authenticated():\n+        return dashboard()\n+    else:\n+        return login_page()'''; \
-		prompt = f'Generate a commit message for the following diff:\n{diff}\n\nCommit message:'; \
+		prompt = f'Generate a single-line commit message for the following diff:\n{diff}\n\nCommit message (one line only):'; \
 		inputs = tokenizer(prompt, return_tensors='pt').to(model.device); \
-		outputs = model.generate(**inputs, max_new_tokens=50, do_sample=True, temperature=0.7); \
-		result = tokenizer.decode(outputs[0], skip_special_tokens=True).split('Commit message:')[-1].strip(); \
-		print('  ' + result.replace('\n', '\n  '))" 2>/dev/null
+		outputs = model.generate(**inputs, max_new_tokens=20, do_sample=True, temperature=0.7); \
+		result = tokenizer.decode(outputs[0], skip_special_tokens=True).split('Commit message')[-1].split(':')[-1].strip().split('\\n')[0]; \
+		print('  ' + result)" 2>/dev/null
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
@@ -80,11 +80,11 @@ test-gemma2-output:
 		model = AutoModelForCausalLM.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True, device_map='auto', torch_dtype=torch.float16); \
 		tokenizer = AutoTokenizer.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True); \
 		diff = '''diff --git a/utils.py b/utils.py\nindex 2345678..bcdefgh 100644\n--- a/utils.py\n+++ b/utils.py\n@@ -15,7 +15,7 @@ def calculate_total(items):\n-    return sum(item.price for item in items)\n+    return sum(item.price for item in items if item.price is not None)'''; \
-		prompt = f'Generate a commit message for the following diff:\n{diff}\n\nCommit message:'; \
+		prompt = f'Generate a single-line commit message for the following diff:\n{diff}\n\nCommit message (one line only):'; \
 		inputs = tokenizer(prompt, return_tensors='pt').to(model.device); \
-		outputs = model.generate(**inputs, max_new_tokens=50, do_sample=True, temperature=0.7); \
-		result = tokenizer.decode(outputs[0], skip_special_tokens=True).split('Commit message:')[-1].strip(); \
-		print('  ' + result.replace('\n', '\n  '))" 2>/dev/null
+		outputs = model.generate(**inputs, max_new_tokens=20, do_sample=True, temperature=0.7); \
+		result = tokenizer.decode(outputs[0], skip_special_tokens=True).split('Commit message')[-1].split(':')[-1].strip().split('\\n')[0]; \
+		print('  ' + result)" 2>/dev/null
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
@@ -103,11 +103,11 @@ test-gemma2-output:
 		model = AutoModelForCausalLM.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True, device_map='auto', torch_dtype=torch.float16); \
 		tokenizer = AutoTokenizer.from_pretrained('./models/gemma-2b-commitpack-ft-test', local_files_only=True); \
 		diff = '''diff --git a/db.py b/db.py\nindex 3456789..cdefghi 100644\n--- a/db.py\n+++ b/db.py\n@@ -20,10 +20,8 @@ class Database:\n-    def get_user(self, id):\n-        return self.query(f\"SELECT * FROM users WHERE id={id}\")\n+    def get_user(self, user_id):\n+        return self.query(\"SELECT * FROM users WHERE id=?\", (user_id,))'''; \
-		prompt = f'Generate a commit message for the following diff:\n{diff}\n\nCommit message:'; \
+		prompt = f'Generate a single-line commit message for the following diff:\n{diff}\n\nCommit message (one line only):'; \
 		inputs = tokenizer(prompt, return_tensors='pt').to(model.device); \
-		outputs = model.generate(**inputs, max_new_tokens=50, do_sample=True, temperature=0.7); \
-		result = tokenizer.decode(outputs[0], skip_special_tokens=True).split('Commit message:')[-1].strip(); \
-		print('  ' + result.replace('\n', '\n  '))" 2>/dev/null
+		outputs = model.generate(**inputs, max_new_tokens=20, do_sample=True, temperature=0.7); \
+		result = tokenizer.decode(outputs[0], skip_special_tokens=True).split('Commit message')[-1].split(':')[-1].strip().split('\\n')[0]; \
+		print('  ' + result)" 2>/dev/null
 	@echo ""
 	@echo "=== Test Complete ==="
 
