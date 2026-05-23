@@ -6,7 +6,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from datasets import load_dataset
 from pprint import pprint
 from trl import SFTTrainer, SFTConfig
-from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
+from peft import LoraConfig, prepare_model_for_kbit_training
 
 print("start")
 print(f"CUDA available: {torch.cuda.is_available()}")
@@ -130,11 +130,8 @@ lora_config = LoraConfig(
     task_type="CAUSAL_LM"
 )
 
-model = get_peft_model(model, lora_config)
-
-
-trainable, total = model.get_nb_trainable_parameters()
-print(f"Trainable: {trainable} | total: {total} | Percentage: {trainable/total*100:.4f}%")
+# SFTTrainerにpeft_configを渡すので、ここではget_peft_modelを呼ばない
+# model = get_peft_model(model, lora_config)
 
 # Training
 tokenizer.pad_token = tokenizer.eos_token
