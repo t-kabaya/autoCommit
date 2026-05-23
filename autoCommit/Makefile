@@ -1,11 +1,12 @@
-.PHONY: help install download-model ft-gemma2b ft-test test-gemma2-output clean disk-usage check-memory
+.PHONY: help install download-model ft-gemma2b ft-gemma2b-better ft-test test-gemma2-output clean disk-usage check-memory
 
 help:
 	@echo "Available commands:"
 	@echo "  make install         - Install dependencies"
 	@echo "  make download-model  - Download Gemma 2B model to models folder"
-	@echo "  make ft-gemma2b      - Fine-tune Gemma 2B (full training)"
-	@echo "  make ft-test         - Fine-tune Gemma 2B (quick test with 100 samples)"
+	@echo "  make ft-gemma2b      - Fine-tune Gemma 2B (1000 samples, 3 epochs)"
+	@echo "  make ft-gemma2b-better - Fine-tune Gemma 2B (5000 samples, 3 epochs) - RECOMMENDED"
+	@echo "  make ft-test         - Fine-tune Gemma 2B (quick test: 100 samples, 1 epoch)"
 	@echo "  make test-gemma2-output - Test fine-tuned Gemma 2B model with 3 sample inputs"
 	@echo "  make disk-usage      - Check disk usage of project and models"
 	@echo "  make check-memory    - Check system memory and GPU memory for fine-tuning"
@@ -27,13 +28,23 @@ ft-gemma2b:
 		--batch_size 4 \
 		--learning_rate 2e-4
 
-# 
+# Quick test with minimal samples (for testing only - not recommended for actual use)
 ft-test:
 	. venv/bin/activate && cd FT && python finetune_gemma2b.py \
 		--model_name google/gemma-2-2b-it \
 		--output_dir ../models/gemma-2b-commitpack-ft-test \
 		--num_samples 100 \
 		--num_epochs 1 \
+		--batch_size 2 \
+		--learning_rate 2e-4
+
+# Better training configuration with more samples
+ft-gemma2b-better:
+	. venv/bin/activate && cd FT && python finetune_gemma2b.py \
+		--model_name google/gemma-2-2b-it \
+		--output_dir ../models/gemma-2b-commitpack-ft-better \
+		--num_samples 5000 \
+		--num_epochs 3 \
 		--batch_size 2 \
 		--learning_rate 2e-4
 
