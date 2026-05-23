@@ -1,10 +1,10 @@
-print("start")
-
 import torch
+import pandas as pd
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from datasets import load_dataset
 from pprint import pprint
 
+print("start")
 print(f"CUDA available: {torch.cuda.is_available()}")
 print(f"CUDA device count: {torch.cuda.device_count()}")
 
@@ -62,5 +62,81 @@ print("\nLoading dataset...")
 dataset = load_dataset("TokenBender/code_instructions_122k_alpaca_style", split="train")
 print(f"Dataset loaded. Total examples: {len(dataset)}")
 
-print("\nFirst data example:")
-pprint(dataset[0])
+df = pd.DataFrame(dataset[:10])
+print("\nFirst 10 rows of the dataset:")
+print(df)
+
+
+def generate_prompt(data_point):
+    """Gen. input text based on a prompt, task instruction, (context info.), and answer
+
+    :param data_point: dict: Data point
+    :return: dict: tokenzed prompt
+    """
+    prefix_text = 'Below is an instruction that describes a task. Write a response that ' \
+               'appropriately completes the request.\n\n'
+    # Samples with additional context into.
+    if data_point['input']:
+        text = f"""<start_of_turn>user {prefix_text} {data_point["instruction"]} here are the inputs {data_point["input"]} <end_of_turn>\n<start_of_turn>model{data_point["output"]} <end_of_turn>"""
+    # Without
+    else:
+        text = f"""<start_of_turn>user {prefix_text} {data_point["instruction"]} <end_of_turn>\n<start_of_turn>model{data_point["output"]} <end_of_turn>"""
+    return text
+
+
+# add the "prompt" column in the dataset
+text_column = [generate_prompt(data_point) for data_point in dataset]
+dataset = dataset.add_column("prompt", text_column)
+
+dataset = dataset.shuffle(seed=1234)  # Shuffle dataset here
+dataset = dataset.map(lambda samples: tokenizer(samples["prompt"]), batched=True)
+
+
+dataset = dataset.train_test_split(test_size=0.2)
+train_data = dataset["train"]
+test_data = dataset["test"]
+
+
+print(test_data)
+
+
+from peft import LoraConfig, PeftModel, prepare_model_for_kbit_training, get_peft_model
+model.gradient_checkpointing_enable()
+model = prepare_model_for_kbit_training(model)
+
+
+import bitsandbytes as bnb
+def find_all_linear_names(model):
+  cls = bnb.nn.Linear4bit #if args.bits == 4 else (bnb.nn.Linear8bitLt if args.bits == 8 else torch.nn.Linear)
+  lora_module_names = set()
+  for name, module in model.named_modules():
+    if isinstance(module, cls):
+      names = name.split('.')
+      lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+    if 'lm_head' in lora_module_names: # needed for 16-bit
+      lora_module_names.remove('lm_head')
+  return list(lora_module_names)
+
+
+modules = find_all_linear_names(model)
+print(modules)
+
+
+from peft import LoraConfig, get_peft_model
+
+lora_config = LoraConfig(
+    r=64,
+    lora_alpha=32,
+    target_modules=modules,
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM"
+)
+
+model = get_peft_model(model, lora_config)
+
+
+trainable, total = model.get_nb_trainable_parameters()
+print(f"Trainable: {trainable} | total: {total} | Percentage: {trainable/total*100:.4f}%")
+
+
