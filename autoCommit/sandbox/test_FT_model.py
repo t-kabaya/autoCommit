@@ -1,5 +1,25 @@
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from peft import PeftModel
 
+model_id = "./models/gemma-2-2b"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
 new_model = "gemma2-Code-Instruct-Finetune-test" #Name of the model you will be pushing to huggingface model hub
+
+def get_completion(query: str, model, tokenizer) -> str:
+    device = "cuda:0"
+    prompt_template = """<start_of_turn>user
+Below is an instruction that describes a task. Write a response that appropriately completes the request.
+{query}
+<end_of_turn>
+<start_of_turn>model
+"""
+    prompt = prompt_template.format(query=query)
+    encodeds = tokenizer(prompt, return_tensors="pt", add_special_tokens=True)
+    model_inputs = encodeds.to(device)
+    generated_ids = model.generate(**model_inputs, max_new_tokens=1000, do_sample=True, pad_token_id=tokenizer.eos_token_id)
+    decoded = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
+    return decoded
 
 base_model = AutoModelForCausalLM.from_pretrained(
     model_id,
