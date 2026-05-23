@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
 model_id = "./models/gemma-2-2b"
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+tokenizer = AutoTokenizer.from_pretrained(model_id, add_eos_token=True)
 new_model = "gemma2-Code-Instruct-Finetune-test" #Name of the model you will be pushing to huggingface model hub
 
 def get_completion(query: str, model, tokenizer) -> str:
