@@ -140,3 +140,36 @@ trainable, total = model.get_nb_trainable_parameters()
 print(f"Trainable: {trainable} | total: {total} | Percentage: {trainable/total*100:.4f}%")
 
 
+# Training
+import transformers
+
+from trl import SFTTrainer
+
+
+tokenizer.pad_token = tokenizer.eos_token
+torch.cuda.empty_cache()
+
+
+trainer = SFTTrainer(
+    model=model,
+    train_dataset=train_data,
+    eval_dataset=test_data,
+    dataset_text_field="prompt",
+    peft_config=lora_config,
+    args=transformers.TrainingArguments(
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=4,
+        #warmup_steps=0.03,
+        max_steps=100,
+        learning_rate=2e-4,
+        logging_steps=1,
+        output_dir="outputs",
+        optim="paged_adamw_8bit",
+        save_strategy="epoch",
+    ),
+    data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
+)
+
+
+model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
+trainer.train()
