@@ -2,6 +2,8 @@ print("start")
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from datasets import load_dataset
+from pprint import pprint
 
 print(f"CUDA available: {torch.cuda.is_available()}")
 print(f"CUDA device count: {torch.cuda.device_count()}")
@@ -28,3 +30,37 @@ model = AutoModelForCausalLM.from_pretrained(
     low_cpu_mem_usage=True
 )
 print("Model loaded successfully")
+
+def get_completion(query: str, model, tokenizer) -> str:
+  device = "cuda:0"
+
+  prompt_template = """
+  <start_of_turn>user
+  Below is an instruction that describes a task. Write a response that appropriately completes the request.
+  {query}
+  <end_of_turn>\n<start_of_turn>model
+
+
+  """
+  prompt = prompt_template.format(query=query)
+
+  encodeds = tokenizer(prompt, return_tensors="pt", add_special_tokens=True)
+
+  model_inputs = encodeds.to(device)
+
+
+  generated_ids = model.generate(**model_inputs, max_new_tokens=1000, do_sample=True, pad_token_id=tokenizer.eos_token_id)
+  # decoded = tokenizer.batch_decode(generated_ids)
+  decoded = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
+  return (decoded)
+
+
+result = get_completion(query="code the fibonacci series in python using reccursion", model=model, tokenizer=tokenizer)
+print(result)
+
+print("\nLoading dataset...")
+dataset = load_dataset("TokenBender/code_instructions_122k_alpaca_style", split="train")
+print(f"Dataset loaded. Total examples: {len(dataset)}")
+
+print("\nFirst data example:")
+pprint(dataset[0])
