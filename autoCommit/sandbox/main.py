@@ -1,8 +1,12 @@
 import torch
 import pandas as pd
+import transformers
+import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from datasets import load_dataset
 from pprint import pprint
+from trl import SFTTrainer, SFTConfig
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model
 
 print("start")
 print(f"CUDA available: {torch.cuda.is_available()}")
@@ -99,13 +103,9 @@ test_data = dataset["test"]
 
 print(test_data)
 
-
-from peft import LoraConfig, PeftModel, prepare_model_for_kbit_training, get_peft_model
 model.gradient_checkpointing_enable()
 model = prepare_model_for_kbit_training(model)
 
-
-import bitsandbytes as bnb
 def find_all_linear_names(model):
   cls = bnb.nn.Linear4bit #if args.bits == 4 else (bnb.nn.Linear8bitLt if args.bits == 8 else torch.nn.Linear)
   lora_module_names = set()
@@ -120,9 +120,6 @@ def find_all_linear_names(model):
 
 modules = find_all_linear_names(model)
 print(modules)
-
-
-from peft import LoraConfig, get_peft_model
 
 lora_config = LoraConfig(
     r=64,
@@ -139,24 +136,16 @@ model = get_peft_model(model, lora_config)
 trainable, total = model.get_nb_trainable_parameters()
 print(f"Trainable: {trainable} | total: {total} | Percentage: {trainable/total*100:.4f}%")
 
-
 # Training
-import transformers
-
-from trl import SFTTrainer
-
-
 tokenizer.pad_token = tokenizer.eos_token
 torch.cuda.empty_cache()
-
 
 trainer = SFTTrainer(
     model=model,
     train_dataset=train_data,
     eval_dataset=test_data,
-    dataset_text_field="prompt",
     peft_config=lora_config,
-    args=transformers.TrainingArguments(
+    args=SFTConfig(
         per_device_train_batch_size=1,
         gradient_accumulation_steps=4,
         #warmup_steps=0.03,
@@ -166,6 +155,7 @@ trainer = SFTTrainer(
         output_dir="outputs",
         optim="paged_adamw_8bit",
         save_strategy="epoch",
+        dataset_text_field="prompt",
     ),
     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
 )
