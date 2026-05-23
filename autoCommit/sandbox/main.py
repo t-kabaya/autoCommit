@@ -145,13 +145,15 @@ trainer = SFTTrainer(
     args=SFTConfig(
         per_device_train_batch_size=1,
         gradient_accumulation_steps=4,
-        #warmup_steps=0.03,
-        max_steps=100,
+        num_train_epochs=3,  # max_stepsの代わりに3エポック実行
         learning_rate=2e-4,
-        logging_steps=1,
+        lr_scheduler_type="cosine",  # コサインスケジューラーに変更
+        warmup_ratio=0.03,  # ウォームアップを追加
+        logging_steps=50,  # ログ頻度を減らす
         output_dir="outputs",
         optim="paged_adamw_8bit",
         save_strategy="epoch",
+        eval_strategy="epoch",  # エポックごとに評価
         dataset_text_field="prompt",
     ),
     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
